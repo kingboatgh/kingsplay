@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kingsplay - Movies & TV Shows</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #141414; color: #fff; margin: 0; }
+        .header { padding: 20px 50px; display: flex; justify-content: space-between; align-items: center; background-color: #141414; }
+        .header a { color: #e50914; text-decoration: none; }
+        .header h1 { font-size: 2.5rem; text-transform: uppercase; }
+        .search-container { display: flex; }
+        .search-box, .media-type-select { background-color: #333; border: 1px solid #333; color: #fff; padding: 10px 15px; font-size: 1rem; border-radius: 5px 0 0 5px; }
+        .media-type-select { border-radius: 0; border-left: 1px solid #555; }
+        .search-button { background-color: #e50914; border: none; color: #fff; padding: 10px 20px; font-size: 1rem; cursor: pointer; border-radius: 0 5px 5px 0; }
+        
+        /* Hero Section */
+        .hero-section {
+            position: relative;
+            height: 550px;
+            margin-bottom: 20px;
+        }
+        .hero-slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+        .hero-slide.active {
+            display: block;
+        }
+        .hero-overlay {
+            background: linear-gradient(to top, #141414, transparent 50%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .hero-content {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            max-width: 600px;
+        }
+        .hero-title {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .hero-description {
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+        .hero-nav {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            transform: translateY(-50%);
+        }
+        .hero-nav button {
+            background-color: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 10px 15px;
+        }
+
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px 50px; }
+        .media-card { background-color: #222; border-radius: 5px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .media-card:hover { transform: scale(1.05); }
+        .media-card img { width: 100%; }
+        .media-card-title { padding: 10px; font-size: 1rem; text-align: center; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); }
+        .modal-content { background-color: #181818; margin: 5% auto; width: 90%; max-width: 1200px; position: relative; display: flex; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); }
+        .close { position: absolute; right: -25px; top: -15px; color: #fff; font-size: 35px; font-weight: bold; cursor: pointer; background-color: #181818; border-radius: 50%; width: 40px; height: 40px; text-align: center; line-height: 35px; z-index: 20;}
+        .player-container { flex-grow: 1; position: relative; }
+        #media-player { width: 100%; height: 600px; border: none; }
+        .sidebar { width: 300px; background-color: #101010; overflow-y: auto; height: 600px; }
+        .seasons-list { list-style: none; padding: 0; margin: 0; }
+        .season-item { padding: 15px; cursor: pointer; border-bottom: 1px solid #222; }
+        .season-item.active { background-color: #e50914; }
+        .episodes-list { list-style: none; padding: 10px; margin: 0; display: none; }
+        .episode-item { padding: 10px 15px; cursor: pointer; }
+        .episode-item:hover, .episode-item.active { background-color: #333; }
+        #switch-source-btn { position: absolute; left: 20px; top: 10px; background-color: #e50914; border: none; color: #fff; padding: 8px 15px; font-size: 0.9rem; cursor: pointer; border-radius: 5px; z-index: 10; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/"><h1>Kingsplay</h1></a>
+        <form action="/search" method="get" class="search-container">
+            <input type="text" name="q" class="search-box" placeholder="Search..." value="{{ query }}">
+            <select name="type" class="media-type-select">
+                <option value="movie" {% if media_type == 'movie' %}selected{% endif %}>Movies</option>
+                <option value="tv" {% if media_type == 'tv' %}selected{% endif %}>TV Shows</option>
+            </select>
+            <button type="submit" class="search-button">Search</button>
+        </form>
+    </div>
+
+    <div class="hero-section">
+        {% for item in popular_media[:5] %}
+        <div class="hero-slide" style="background-image: url('{{ image_url }}{{ item.backdrop_path }}');">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h2 class="hero-title">{{ item.title or item.name }}</h2>
+                <p class="hero-description">{{ item.overview }}</p>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="hero-nav">
+            <button id="prev-slide">&lt;</button>
+            <button id="next-slide">&gt;</button>
+        </div>
+    </div>
+
+    <div class="media-container">
+        <h2 style="padding-left: 50px;">{% if search_results %}Search Results{% else %}Popular Movies & TV{% endif %}</h2>
+        <div class="media-grid">
+            {% set media_list = search_results if search_results else popular_media %}
+            {% for item in media_list %}
+                {% if item.poster_path %}
+                    <div class="media-card" data-tmdb-id="{{ item.id }}" data-media-type="{{ item.media_type }}">
+                        <img src="{{ image_url }}{{ item.poster_path }}" alt="{{ item.title or item.name }}">
+                        <div class="media-card-title">{{ item.title or item.name }}</div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div id="media-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="sidebar" id="sidebar"></div>
+            <div class="player-container">
+                <button id="switch-source-btn">Switch Source</button>
+                <iframe id="media-player" src="" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Slideshow logic
+        const slides = document.querySelectorAll('.hero-slide');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+        }
+
+        document.getElementById('next-slide').addEventListener('click', () => {
+            currentSlide = (currentSlide + 1) % slides.length;
+            showSlide(currentSlide);
+        });
+
+        document.getElementById('prev-slide').addEventListener('click', () => {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            showSlide(currentSlide);
+        });
+        
+        setInterval(() => {
+            currentSlide = (currentSlide + 1) % slides.length;
+            showSlide(currentSlide);
+        }, 5000);
+
+        showSlide(0);
+
+        const modal = document.getElementById('media-modal');
+        const player = document.getElementById('media-player');
+        const sidebar = document.getElementById('sidebar');
+        const closeBtn = document.querySelector('.close');
+        
+        let currentSourceIndex = 0;
+        let activeMediaInfo = { tmdbId: null, imdbId: null, mediaType: null, season: null, episode: null };
+
+        const providers = [
+            // TMDB-based
+            (mediaType, tmdbId, imdbId, season, episode) => {
+                if (mediaType === 'movie') return `https://vidsrc.me/embed/movie?tmdb=${tmdbId}`;
+                return `https://vidsrc.me/embed/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}`;
+            },
+            (mediaType, tmdbId, imdbId, season, episode) => {
+                if (mediaType === 'movie') return `https://vidsrc.pro/embed/movie/${tmdbId}`;
+                return `https://vidsrc.pro/embed/tv/${tmdbId}/${season}/${episode}`;
+            },
+            (mediaType, tmdbId, imdbId, season, episode) => {
+                if (mediaType === 'movie') return `https://www.2embed.cc/embed/tmdb/movie?id=${tmdbId}`;
+                return `https://www.2embed.cc/embed/tmdb/tv?id=${tmdbId}&s=${season}&e=${episode}`;
+            },
+            // IMDb-based
+            (mediaType, tmdbId, imdbId, season, episode) => {
+                if (mediaType === 'movie') return `https://multiembed.mov/?video_id=${imdbId}`;
+                return `https://multiembed.mov/?video_id=${imdbId}&s=${season}&e=${episode}`;
+            },
+             (mediaType, tmdbId, imdbId, season, episode) => {
+                if (mediaType === 'movie') return `https://moviesapi.club/movie/${imdbId}`;
+                return `https://moviesapi.club/tv/${imdbId}-${season}-${episode}`;
+            }
+        ];
+
+        function updatePlayerSource() {
+            if (!activeMediaInfo.tmdbId || !activeMediaInfo.imdbId) return;
+            const { mediaType, tmdbId, imdbId, season, episode } = activeMediaInfo;
+            const providerFunc = providers[currentSourceIndex];
+            player.src = providerFunc(mediaType, tmdbId, imdbId, season, episode);
+        }
+
+        document.getElementById('switch-source-btn').addEventListener('click', () => {
+            currentSourceIndex = (currentSourceIndex + 1) % providers.length;
+            updatePlayerSource();
+        });
+
+        document.querySelectorAll('.media-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const tmdbId = this.getAttribute('data-tmdb-id');
+                const mediaType = this.getAttribute('data-media-type');
+                
+                fetch(`/details/${mediaType}/${tmdbId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+
+                        currentSourceIndex = 0; // Reset to first provider
+                        activeMediaInfo = { tmdbId: data.tmdb_id, imdbId: data.imdb_id, mediaType, season: null, episode: null };
+                        sidebar.innerHTML = '';
+
+                        if (mediaType === 'tv' && data.seasons) {
+                            sidebar.style.display = 'block';
+                            player.parentElement.style.width = 'calc(100% - 300px)';
+                            
+                            let seasonsList = document.createElement('ul');
+                            seasonsList.className = 'seasons-list';
+                            data.seasons.forEach(season => {
+                                let seasonItem = document.createElement('li');
+                                seasonItem.className = 'season-item';
+                                seasonItem.textContent = `${season.name} (${season.episode_count} Episodes)`;
+                                seasonItem.dataset.seasonNumber = season.season_number;
+
+                                let episodesList = document.createElement('ul');
+                                episodesList.className = 'episodes-list';
+                                for (let i = 1; i <= season.episode_count; i++) {
+                                    let episodeItem = document.createElement('li');
+                                    episodeItem.className = 'episode-item';
+                                    episodeItem.textContent = `Episode ${i}`;
+                                    episodeItem.dataset.episodeNumber = i;
+                                    episodeItem.dataset.seasonNumber = season.season_number;
+                                    episodesList.appendChild(episodeItem);
+                                }
+                                seasonItem.appendChild(episodesList);
+                                seasonsList.appendChild(seasonItem);
+                            });
+                            sidebar.appendChild(seasonsList);
+
+                            if (data.seasons.length > 0) {
+                                activeMediaInfo.season = data.seasons[0].season_number;
+                                activeMediaInfo.episode = 1;
+                                
+                                seasonsList.querySelector(`.season-item[data-season-number='${activeMediaInfo.season}']`).classList.add('active');
+                                seasonsList.querySelector(`.season-item[data-season-number='${activeMediaInfo.season}'] .episodes-list`).style.display = 'block';
+                                seasonsList.querySelector(`.episode-item[data-season-number='${activeMediaInfo.season}'][data-episode-number='1']`).classList.add('active');
+                            }
+                        } else { // Movie
+                            sidebar.style.display = 'none';
+                            player.parentElement.style.width = '100%';
+                        }
+                        updatePlayerSource();
+                        modal.style.display = 'block';
+                    });
+            });
+        });
+
+        sidebar.addEventListener('click', function(e) {
+            if (e.target.matches('.season-item:not(.active)')) {
+                document.querySelectorAll('.season-item').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.episodes-list').forEach(l => l.style.display = 'none');
+                e.target.classList.add('active');
+                e.target.querySelector('.episodes-list').style.display = 'block';
+            } else if (e.target.matches('.episode-item')) {
+                document.querySelectorAll('.episode-item').forEach(ep => ep.classList.remove('active'));
+                e.target.classList.add('active');
+                activeMediaInfo.season = e.target.dataset.seasonNumber;
+                activeMediaInfo.episode = e.target.dataset.episodeNumber;
+                updatePlayerSource();
+            }
+        });
+
+        function closeModal() {
+            modal.style.display = 'none';
+            player.src = '';
+            sidebar.innerHTML = '';
+            activeMediaInfo = { tmdbId: null, imdbId: null, mediaType: null, season: null, episode: null };
+        }
+
+        closeBtn.onclick = closeModal;
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

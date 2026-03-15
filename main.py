@@ -1,15 +1,17 @@
 import os
 
-from flask import Flask, send_file
+from flask import Flask
+from src.blueprints.movies import movies_blueprint
 
-app = Flask(__name__)
+def create_app():
+    app = Flask(__name__, template_folder='templates')
+    app.register_blueprint(movies_blueprint)
+    return app
 
-@app.route("/")
-def index():
-    return send_file('src/index.html')
+app = create_app()
 
 def main():
-    app.run(port=int(os.environ.get('PORT', 80)))
+    app.run(port=int(os.environ.get('PORT', 8080)))
 
 if __name__ == "__main__":
     main()

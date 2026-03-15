@@ -1,3 +1,4 @@
 #!/bin/sh
 source .venv/bin/activate
-python -u -m flask --app main run -p $PORT --debug
+PORT=${PORT:-8080}
+python -u -m flask --app main run --port "$PORT" --debug
