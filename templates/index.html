@@ -14,61 +14,57 @@
         .search-box, .media-type-select { background-color: #333; border: 1px solid #333; color: #fff; padding: 10px 15px; font-size: 1rem; border-radius: 5px 0 0 5px; }
         .media-type-select { border-radius: 0; border-left: 1px solid #555; }
         .search-button { background-color: #e50914; border: none; color: #fff; padding: 10px 20px; font-size: 1rem; cursor: pointer; border-radius: 0 5px 5px 0; }
-        
-        /* Hero Section */
-        .hero-section {
-            position: relative;
-            height: 550px;
-            margin-bottom: 20px;
+
+        /* New Hero Section Styles */
+        .hero-section { 
+            height: 550px; 
+            margin-bottom: 20px; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        .slides-wrapper { 
+            display: flex; 
+            transition: transform 0.5s ease-in-out; 
         }
         .hero-slide {
-            display: none;
-            width: 100%;
-            height: 100%;
+            min-width: 100%;
+            height: 550px;
+            position: relative;
             background-size: cover;
             background-position: center;
         }
-        .hero-slide.active {
-            display: block;
+        .hero-overlay { 
+            background: linear-gradient(to top, #141414, transparent 50%); 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
         }
-        .hero-overlay {
-            background: linear-gradient(to top, #141414, transparent 50%);
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .hero-content { 
+            position: absolute; 
+            bottom: 50px; 
+            left: 50px; 
+            max-width: 600px; 
         }
-        .hero-content {
-            position: absolute;
-            bottom: 50px;
-            left: 50px;
-            max-width: 600px;
+        .hero-title { font-size: 3rem; font-weight: bold; }
+        .hero-description { font-size: 1.2rem; margin-top: 10px; }
+        .slider-nav { 
+            position: absolute; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
         }
-        .hero-title {
-            font-size: 3rem;
-            font-weight: bold;
+        .slider-dot { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background-color: #555; 
+            margin: 0 5px; 
+            cursor: pointer; 
         }
-        .hero-description {
-            font-size: 1.2rem;
-            margin-top: 10px;
-        }
-        .hero-nav {
-            position: absolute;
-            top: 50%;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            transform: translateY(-50%);
-        }
-        .hero-nav button {
-            background-color: rgba(0,0,0,0.5);
-            border: none;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            padding: 10px 15px;
-        }
+        .slider-dot.active { background-color: #e50914; }
 
         .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px 50px; }
         .media-card { background-color: #222; border-radius: 5px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
@@ -132,21 +128,22 @@
         </form>
     </div>
 
+    {% if not search_results %}
     <div class="hero-section">
-        {% for item in popular_media[:5] %}
-        <div class="hero-slide" style="background-image: url('{{ image_url }}{{ item.backdrop_path }}');">
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-                <h2 class="hero-title">{{ item.title or item.name }}</h2>
-                <p class="hero-description">{{ item.overview }}</p>
+        <div class="slides-wrapper">
+            {% for item in popular_media[:5] %}
+            <div class="hero-slide" style="background-image: url('{{ image_url }}{{ item.backdrop_path }}');">
+                <div class="hero-overlay"></div>
+                <div class="hero-content">
+                    <h2 class="hero-title">{{ item.title or item.name }}</h2>
+                    <p class="hero-description">{{ item.overview }}</p>
+                </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-        <div class="hero-nav">
-            <button id="prev-slide">&lt;</button>
-            <button id="next-slide">&gt;</button>
-        </div>
+        <div class="slider-nav"></div>
     </div>
+    {% endif %}
 
     <div class="media-container">
         <h2 style="padding-left: 50px;">{% if search_results %}Search Results{% else %}Popular Movies & TV{% endif %}</h2>
@@ -173,35 +170,58 @@
         </div>
     </div>
     <script>
-        // Slideshow logic
-        const slides = document.querySelectorAll('.hero-slide');
-        let currentSlide = 0;
+        // New Slideshow Logic
+        const slidesWrapper = document.querySelector('.slides-wrapper');
+        if (slidesWrapper) {
+            const slides = document.querySelectorAll('.hero-slide');
+            const slideCount = slides.length;
+            const sliderNav = document.querySelector('.slider-nav');
+            let currentIndex = 0;
+            let slideInterval;
 
-        function showSlide(index) {
-            slides.forEach((slide, i) => {
-                slide.classList.remove('active');
-                if (i === index) {
-                    slide.classList.add('active');
+            function createDots() {
+                for (let i = 0; i < slideCount; i++) {
+                    const dot = document.createElement('div');
+                    dot.classList.add('slider-dot');
+                    dot.addEventListener('click', () => {
+                        goToSlide(i);
+                        resetInterval();
+                    });
+                    sliderNav.appendChild(dot);
                 }
-            });
+            }
+
+            function updateDots() {
+                const dots = document.querySelectorAll('.slider-dot');
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentIndex);
+                });
+            }
+
+            function goToSlide(index) {
+                currentIndex = index;
+                slidesWrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+                updateDots();
+            }
+
+            function nextSlide() {
+                currentIndex = (currentIndex + 1) % slideCount;
+                goToSlide(currentIndex);
+            }
+
+            function startInterval() {
+                slideInterval = setInterval(nextSlide, 5000);
+            }
+
+            function resetInterval() {
+                clearInterval(slideInterval);
+                startInterval();
+            }
+
+            createDots();
+            goToSlide(0);
+            startInterval();
         }
-
-        document.getElementById('next-slide').addEventListener('click', () => {
-            currentSlide = (currentSlide + 1) % slides.length;
-            showSlide(currentSlide);
-        });
-
-        document.getElementById('prev-slide').addEventListener('click', () => {
-            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-            showSlide(currentSlide);
-        });
-        
-        setInterval(() => {
-            currentSlide = (currentSlide + 1) % slides.length;
-            showSlide(currentSlide);
-        }, 5000);
-
-        showSlide(0);
 
         const modal = document.getElementById('media-modal');
         const player = document.getElementById('media-player');
