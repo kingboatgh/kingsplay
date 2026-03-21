@@ -1,7 +1,10 @@
 import os
-
 from flask import Flask
 from src.blueprints.movies import movies_blueprint
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_app():
     app = Flask(__name__, template_folder='templates')

@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify
 import requests
+import os
 
 movies_blueprint = Blueprint('movies', __name__)
 
-TMDB_API_KEY = '822c3530f25257e4bb5e2892f9c656ac'
+TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 TMDB_API_URL = 'https://api.themoviedb.org/3'
 TMDB_IMAGE_URL = 'https://image.tmdb.org/t/p/w500'
 
@@ -29,23 +30,9 @@ def index():
 def search():
     query = request.args.get('q')
     media_type = request.args.get('type', 'movie')
-    
-    popular_movies_url = f"{TMDB_API_URL}/movie/popular"
-    popular_tv_url = f"{TMDB_API_URL}/tv/popular"
-    params = {'api_key': TMDB_API_KEY}
-    
-    movies_response = requests.get(popular_movies_url, params=params)
-    popular_movies = movies_response.json().get('results', []) if movies_response.status_code == 200 else []
-    for movie in popular_movies:
-        movie['media_type'] = 'movie'
-
-    tv_response = requests.get(popular_tv_url, params=params)
-    popular_tv = tv_response.json().get('results', []) if tv_response.status_code == 200 else []
-    for show in popular_tv:
-        show['media_type'] = 'tv'
 
     if not query:
-        return render_template("index.html", error="Please enter a search query.", popular_media=popular_movies + popular_tv, image_url=TMDB_IMAGE_URL)
+        return render_template("index.html", error="Please enter a search query.")
 
     search_url = f"{TMDB_API_URL}/search/{media_type}"
     params = {'api_key': TMDB_API_KEY, 'query': query}
@@ -56,9 +43,9 @@ def search():
         results = data.get('results', [])
         for item in results:
             item['media_type'] = media_type
-        return render_template("index.html", search_results=results, query=query, media_type=media_type, image_url=TMDB_IMAGE_URL, popular_media=popular_movies + popular_tv)
+        return render_template("index.html", search_results=results, query=query, media_type=media_type, image_url=TMDB_IMAGE_URL)
     else:
-        return render_template("index.html", error="Could not fetch results. Please check the API key and try again.", popular_media=popular_movies + popular_tv, image_url=TMDB_IMAGE_URL)
+        return render_template("index.html", error="Could not fetch results. Please check the API key and try again.")
 
 @movies_blueprint.route('/details/<media_type>/<int:tmdb_id>')
 def details(media_type, tmdb_id):
