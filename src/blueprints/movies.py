@@ -10,8 +10,8 @@ TMDB_IMAGE_URL = 'https://image.tmdb.org/t/p/w500'
 
 @movies_blueprint.route('/')
 def index():
-    popular_movies_url = f"{TMDB_API_URL}/movie/popular"
-    popular_tv_url = f"{TMDB_API_URL}/tv/popular"
+    popular_movies_url = f"{TMDB_API_URL}/trending/movie/week"
+    popular_tv_url = f"{TMDB_API_URL}/trending/tv/week"
     params = {'api_key': TMDB_API_KEY}
     
     movies_response = requests.get(popular_movies_url, params=params)
@@ -31,8 +31,8 @@ def search():
     query = request.args.get('q')
     media_type = request.args.get('type', 'movie')
     
-    popular_movies_url = f"{TMDB_API_URL}/movie/popular"
-    popular_tv_url = f"{TMDB_API_URL}/tv/popular"
+    popular_movies_url = f"{TMDB_API_URL}/trending/movie/week"
+    popular_tv_url = f"{TMDB_API_URL}/trending/tv/week"
     params = {'api_key': TMDB_API_KEY}
     
     movies_response = requests.get(popular_movies_url, params=params)
